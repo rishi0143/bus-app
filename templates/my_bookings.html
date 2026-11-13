@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>My Bookings</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+<body>
+
+<header class="navbar">
+
+    <div class="logo">
+        <span>G</span> GoBus
+    </div>
+
+    <nav>
+        <a href="/">Home</a>
+        <a href="/my-bookings">My Bookings</a>
+    </nav>
+
+</header>
+
+
+<section class="my-bookings">
+
+    <h1>My Bookings</h1>
+
+    <form method="GET">
+
+        <input type="tel"
+               name="phone"
+               value="{{ phone }}"
+               maxlength="10"
+               placeholder="Enter mobile number"
+               required>
+
+        <button type="submit">
+            Search
+        </button>
+
+    </form>
+
+
+    {% if phone and not bookings %}
+
+        <p>No bookings found.</p>
+
+    {% endif %}
+
+
+    {% for booking in bookings %}
+
+    <div class="booking-card">
+
+        <h2>{{ booking.destination }}</h2>
+
+        <p>Booking ID: #{{ booking.id }}</p>
+
+        <p>Passenger: {{ booking.name }}</p>
+
+        <p>Date: {{ booking.travel_date }}</p>
+
+        <p>Departure: {{ booking.departure }}</p>
+
+        <p>Seats: {{ booking.seats }}</p>
+
+        <h3>Total: ₹{{ booking.total }}</h3>
+
+    </div>
+
+    {% endfor %}
+
+</section>
+
+</body>
+</html>

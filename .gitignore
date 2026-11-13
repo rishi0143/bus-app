@@ -1,0 +1,18 @@
+
+# Terraform downloaded modules and providers
+**/.terraform/
+
+# Terraform state and plans
+*.tfstate
+*.tfstate.*
+*.tfplan
+
+# Sensitive credentials
+terraform/terraform.tfvars
+*.auto.tfvars
+.env
+
+# Python
+__pycache__/
+*.pyc
+venv/

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Booking Confirmation</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+<body>
+
+<header class="navbar">
+
+    <div class="logo">
+        <span>G</span> GoBus
+    </div>
+
+    <nav>
+        <a href="/">Home</a>
+        <a href="/my-bookings">My Bookings</a>
+    </nav>
+
+</header>
+
+
+<div class="confirmation">
+
+    <div class="success">
+        ✓
+    </div>
+
+    <h1>Booking Successful!</h1>
+
+    <p>Thank you for booking with GoBus.</p>
+
+    <div class="ticket">
+
+        <h2>GO BUS TICKET</h2>
+
+        <hr>
+
+        <p>
+            Booking ID:
+            <strong>#{{ booking_id }}</strong>
+        </p>
+
+        <p>
+            Passenger:
+            <strong>{{ name }}</strong>
+        </p>
+
+        <p>
+            Destination:
+            <strong>{{ destination }}</strong>
+        </p>
+
+        <p>
+            Travel Date:
+            <strong>{{ travel_date }}</strong>
+        </p>
+
+        <p>
+            Departure:
+            <strong>{{ departure }}</strong>
+        </p>
+
+        <p>
+            Seats:
+            <strong>{{ seats }}</strong>
+        </p>
+
+        <hr>
+
+        <h2 class="total">
+            Total Amount: ₹{{ total }}
+        </h2>
+
+    </div>
+
+    <a href="/" class="home-btn">
+        Back To Home
+    </a>
+
+    <a href="/my-bookings" class="home-btn">
+        My Bookings
+    </a>
+
+</div>
+
+</body>
+</html>

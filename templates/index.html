@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>GoBus - Bus Ticket Booking</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet">
+</head>
+
+<body>
+
+<header class="navbar">
+
+    <div class="logo">
+        <span>G</span> GoBus
+    </div>
+
+    <nav>
+        <a href="/">Home</a>
+        <a href="#destinations">Destinations</a>
+        <a href="/my-bookings">My Bookings</a>
+    </nav>
+
+</header>
+
+
+<section class="hero">
+
+    <div class="hero-content">
+
+        <h1>
+            India's Journey<br>
+            <span>Starts With GoBus</span>
+        </h1>
+
+        <p>
+            Book your bus tickets easily.
+            Travel to beautiful destinations every day.
+        </p>
+
+        <a href="#destinations" class="hero-btn">
+            Explore Destinations
+        </a>
+
+    </div>
+
+</section>
+
+
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+
+<section class="search-box">
+
+    <h2>Search Your Journey</h2>
+
+    <form action="/" method="get">
+
+        <div class="search-fields">
+
+            <div>
+                <label>From</label>
+                <input type="text" value="Warangal" readonly>
+            </div>
+
+            <div>
+                <label>Travel Date</label>
+                <input type="date"
+                       name="travel_date"
+                       min="{{ today }}"
+                       required>
+            </div>
+
+            <button type="submit">
+                Search Buses
+            </button>
+
+        </div>
+
+    </form>
+
+</section>
+
+
+<section class="destinations" id="destinations">
+
+    <h2>Popular Destinations</h2>
+
+    <p class="subtitle">
+        Explore five beautiful destinations from Warangal
+    </p>
+
+    <div class="destination-grid">
+
+        {% for name, place in destinations.items() %}
+
+        <div class="card">
+
+            <div class="card-content">
+
+                <span class="daily">DAILY BUSES</span>
+
+                <h3>{{ name }}</h3>
+
+                <p>{{ place.description }}</p>
+
+                <p>Travel Time: {{ place.duration }}</p>
+
+                <h2>₹{{ place.fare }}</h2>
+
+                <form action="/book" method="POST">
+
+                    <input type="hidden"
+                           name="destination"
+                           value="{{ name }}">
+
+                    <label>Passenger Name</label>
+
+                    <input type="text"
+                           name="name"
+                           placeholder="Enter your name"
+                           required>
+
+                    <label>Mobile Number</label>
+
+                    <input type="tel"
+                           name="phone"
+                           pattern="[0-9]{10}"
+                           maxlength="10"
+                           placeholder="10-digit mobile number"
+                           required>
+
+                    <label>Travel Date</label>
+
+                    <input type="date"
+                           name="travel_date"
+                           min="{{ today }}"
+                           required>
+
+                    <label>Departure Time</label>
+
+                    <select name="departure" required>
+
+                        {% for time in departures %}
+
+                        <option value="{{ time }}">
+                            {{ time }}
+                        </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                    <label>Number of Seats</label>
+
+                    <select name="seats">
+
+                        {% for n in range(1,7) %}
+
+                        <option value="{{ n }}">
+                            {{ n }}
+                        </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                    <button type="submit">
+                        Book Now →
+                    </button>
+
+                </form>
+
+            </div>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+</section>
+
+
+<footer>
+
+    <h2>GoBus</h2>
+
+    <p>Travel Smart. Travel Safe.</p>
+
+    <p>© 2026 GoBus Bus Ticket Booking</p>
+
+</footer>
+
+</body>
+</html>
