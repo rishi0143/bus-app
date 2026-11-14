@@ -48,3 +48,19 @@ variable "ssh_cidr" {
   type        = string
   description = "Your public IP address followed by /32"
 }
+variable "db_host" {
+  type = string
+}
+
+variable "db_port" {
+  type    = number
+  default = 3306
+}
+
+variable "db_name" {
+  type = string
+}
+
+variable "db_user" {
+  type = string
+}

@@ -1,453 +1,218 @@
 
-from flask import Flask, render_template, request, redirect, url_for, flash
-import pymysql
 import os
 from datetime import date
+from flask import Flask, render_template, request, redirect, url_for, flash
+import mysql.connector
+from mysql.connector import Error
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
-
-app.secret_key = os.getenv(
-    "SECRET_KEY",
-    "change-this-secret-key"
-)
-
-# ==================================
-# DATABASE CONFIGURATION - AWS RDS
-# ==================================
-
-DB_HOST = os.getenv("DB_HOST")
-DB_USER = os.getenv("DB_USER", "busadmin")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_NAME = os.getenv("DB_NAME", "busbooking")
-DB_PORT = int(os.getenv("DB_PORT", "3306"))
+app.secret_key = os.getenv("SECRET_KEY", "gobus-development-secret")
 
 
-def get_db():
-
-    if not DB_HOST or not DB_PASSWORD:
-        raise RuntimeError(
-            "Please configure DB_HOST and DB_PASSWORD environment variables"
-        )
-
-    return pymysql.connect(
-        host=DB_HOST,
-        user=DB_USER,
-        password=DB_PASSWORD,
-        database=DB_NAME,
-        port=DB_PORT,
-        cursorclass=pymysql.cursors.DictCursor,
-        connect_timeout=10,
-        charset="utf8mb4",
-        autocommit=False
+# Database connection
+def get_db_connection():
+    return mysql.connector.connect(
+        host=os.getenv("DB_HOST"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        database=os.getenv("DB_NAME"),
+        port=int(os.getenv("DB_PORT", 3306)),
+        connection_timeout=10
     )
 
 
-# ==================================
-# DESTINATIONS
-# ==================================
+# Create bookings table
+def init_db():
+    connection = get_db_connection()
+    cursor = connection.cursor()
 
-destinations = {
-    "Hyderabad": {
-        "fare": 350,
-        "duration": "3 hr 30 min",
-        "description": "City of Pearls"
-    },
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS bookings (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            email VARCHAR(150) NOT NULL,
+            phone VARCHAR(20) NOT NULL,
+            source VARCHAR(100) NOT NULL,
+            destination VARCHAR(100) NOT NULL,
+            travel_date DATE NOT NULL,
+            seats INT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
 
-    "Ramappa Temple": {
-        "fare": 180,
-        "duration": "1 hr 30 min",
-        "description": "UNESCO World Heritage Site"
-    },
-
-    "Laknavaram Lake": {
-        "fare": 220,
-        "duration": "1 hr 45 min",
-        "description": "Beautiful lake and hanging bridge"
-    },
-
-    "Yadadri": {
-        "fare": 280,
-        "duration": "3 hr",
-        "description": "Famous hilltop temple"
-    },
-
-    "Bhadrachalam": {
-        "fare": 450,
-        "duration": "5 hr 30 min",
-        "description": "Temple beside Godavari river"
-    }
-}
+    connection.commit()
+    cursor.close()
+    connection.close()
 
 
-# ==================================
-# DAILY BUS DEPARTURE TIMES
-# ==================================
-
-departures = [
-    "06:00 AM",
-    "08:30 AM",
-    "11:00 AM",
-    "02:00 PM",
-    "05:30 PM",
-    "09:00 PM"
-]
-
-
-# ==================================
-# CREATE MYSQL TABLE
-# ==================================
-
-def create_table():
-
-    con = get_db()
-
-    try:
-
-        with con.cursor() as cur:
-
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS bookings (
-
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-
-                    name VARCHAR(100) NOT NULL,
-
-                    phone VARCHAR(10) NOT NULL,
-
-                    destination VARCHAR(100) NOT NULL,
-
-                    travel_date DATE NOT NULL,
-
-                    departure VARCHAR(30) NOT NULL,
-
-                    seats INT NOT NULL,
-
-                    total DECIMAL(10,2) NOT NULL,
-
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-
-                )
-            """)
-
-        con.commit()
-
-        print("MySQL bookings table created successfully!")
-
-    except Exception:
-
-        con.rollback()
-        raise
-
-    finally:
-
-        con.close()
-
-
-# ==================================
-# HOME PAGE
-# ==================================
-
+# Home page
 @app.route("/")
 def home():
+    bookings = []
+    db_error = None
+
+    try:
+        init_db()
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+
+        cursor.execute("""
+            SELECT * FROM bookings
+            ORDER BY id DESC
+            LIMIT 5
+        """)
+
+        bookings = cursor.fetchall()
+
+        cursor.close()
+        connection.close()
+
+    except Error as e:
+        db_error = "Unable to connect to the database. Please try again later."
+        app.logger.error("Database error: %s", e)
 
     return render_template(
-
         "index.html",
-
-        destinations=destinations,
-
-        departures=departures,
-
+        bookings=bookings,
+        db_error=db_error,
         today=date.today().isoformat()
-
     )
 
 
-# ==================================
-# BOOK BUS TICKET
-# ==================================
-
+# Book ticket
 @app.route("/book", methods=["POST"])
 def book():
+    name = request.form.get("name", "").strip()
+    email = request.form.get("email", "").strip()
+    phone = request.form.get("phone", "").strip()
+    source = request.form.get("source", "").strip()
+    destination = request.form.get("destination", "").strip()
+    travel_date = request.form.get("travel_date", "").strip()
+    seats = request.form.get("seats", type=int)
 
-    name = request.form.get(
-        "name", ""
-    ).strip()
+    if not all([name, email, phone, source, destination, travel_date]):
+        flash("Please fill all the required fields.", "error")
+        return redirect(url_for("home"))
 
-    phone = request.form.get(
-        "phone", ""
-    ).strip()
+    if source.lower() == destination.lower():
+        flash("Source and destination cannot be the same.", "error")
+        return redirect(url_for("home"))
 
-    destination = request.form.get(
-        "destination"
-    )
-
-    travel_date = request.form.get(
-        "travel_date"
-    )
-
-    departure = request.form.get(
-        "departure"
-    )
+    if not seats or seats < 1 or seats > 6:
+        flash("Please select between 1 and 6 seats.", "error")
+        return redirect(url_for("home"))
 
     try:
-
-        seats = int(
-            request.form.get("seats", 0)
-        )
-
-    except ValueError:
-
-        seats = 0
-
-    # Validate passenger name
-
-    if not name or len(name) > 100:
-
-        flash("Please enter a valid passenger name.")
-
-        return redirect(url_for("home"))
-
-    # Validate mobile number
-
-    if len(phone) != 10 or not phone.isdigit():
-
-        flash("Enter a valid 10-digit mobile number.")
-
-        return redirect(url_for("home"))
-
-    # Validate destination
-
-    if destination not in destinations:
-
-        flash("Invalid destination.")
-
-        return redirect(url_for("home"))
-
-    # Validate seats
-
-    if seats < 1 or seats > 6:
-
-        flash("Select between 1 and 6 seats.")
-
-        return redirect(url_for("home"))
-
-    # Validate date
-
-    try:
-
-        selected_date = date.fromisoformat(
-            travel_date
-        )
-
+        selected_date = date.fromisoformat(travel_date)
         if selected_date < date.today():
-
-            flash("Please select today or a future date.")
-
+            flash("Travel date cannot be in the past.", "error")
             return redirect(url_for("home"))
-
-    except (ValueError, TypeError):
-
-        flash("Invalid travel date.")
-
+    except ValueError:
+        flash("Please select a valid travel date.", "error")
         return redirect(url_for("home"))
 
-    # Validate departure
-
-    if departure not in departures:
-
-        flash("Invalid departure time.")
-
-        return redirect(url_for("home"))
-
-    # Calculate ticket amount
-
-    fare = destinations[destination]["fare"]
-
-    total = fare * seats
-
-    # Save booking in AWS RDS MySQL
-
-    con = get_db()
+    connection = None
+    cursor = None
 
     try:
+        init_db()
+        connection = get_db_connection()
+        cursor = connection.cursor()
 
-        with con.cursor() as cur:
+        sql = """
+            INSERT INTO bookings
+            (name, email, phone, source, destination, travel_date, seats)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """
 
-            cur.execute("""
+        values = (
+            name, email, phone, source,
+            destination, travel_date, seats
+        )
 
-                INSERT INTO bookings
+        cursor.execute(sql, values)
+        connection.commit()
 
-                (
-                    name,
-                    phone,
-                    destination,
-                    travel_date,
-                    departure,
-                    seats,
-                    total
-                )
+        booking_id = cursor.lastrowid
 
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+        flash(
+            f"Booking successful! Your booking ID is #{booking_id}",
+            "success"
+        )
 
-            """, (
+    except Error as e:
+        if connection:
+            connection.rollback()
 
-                name,
-                phone,
-                destination,
-                travel_date,
-                departure,
-                seats,
-                total
-
-            ))
-
-            booking_id = cur.lastrowid
-
-        con.commit()
-
-    except Exception:
-
-        con.rollback()
-
-        app.logger.exception("Booking database error")
-
-        flash("Unable to save booking. Please try again.")
-
-        return redirect(url_for("home"))
+        app.logger.error("Booking error: %s", e)
+        flash("Booking failed. Please check database connection.", "error")
 
     finally:
+        if cursor:
+            cursor.close()
+        if connection and connection.is_connected():
+            connection.close()
 
-        con.close()
-
-    # Booking confirmation
-
-    return render_template(
-
-        "confirmation.html",
-
-        booking_id=booking_id,
-
-        name=name,
-
-        destination=destination,
-
-        travel_date=travel_date,
-
-        departure=departure,
-
-        seats=seats,
-
-        total=total
-
-    )
+    return redirect(url_for("home"))
 
 
-# ==================================
-# MY BOOKINGS
-# ==================================
+# Booking history
+@app.route("/bookings")
+def bookings():
+    try:
+        init_db()
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
 
-@app.route("/my-bookings")
-def my_bookings():
+        cursor.execute("""
+            SELECT * FROM bookings
+            ORDER BY id DESC
+        """)
 
-    phone = request.args.get(
-        "phone", ""
-    ).strip()
+        all_bookings = cursor.fetchall()
 
-    bookings = []
+        cursor.close()
+        connection.close()
 
-    if phone:
+        return render_template(
+            "bookings.html",
+            bookings=all_bookings
+        )
 
-        if len(phone) != 10 or not phone.isdigit():
-
-            flash("Enter a valid 10-digit mobile number.")
-
-            return redirect(url_for("my_bookings"))
-
-        con = get_db()
-
-        try:
-
-            with con.cursor() as cur:
-
-                cur.execute("""
-
-                    SELECT *
-
-                    FROM bookings
-
-                    WHERE phone = %s
-
-                    ORDER BY id DESC
-
-                """, (phone,))
-
-                bookings = cur.fetchall()
-
-        finally:
-
-            con.close()
-
-    return render_template(
-
-        "my_bookings.html",
-
-        bookings=bookings,
-
-        phone=phone
-
-    )
+    except Error as e:
+        app.logger.error("Booking history error: %s", e)
+        return "Unable to retrieve bookings.", 500
 
 
-# ==================================
-# DATABASE HEALTH CHECK
-# ==================================
-
+# Health check
 @app.route("/health")
 def health():
-
     try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        cursor.execute("SELECT 1")
+        cursor.fetchone()
 
-        con = get_db()
-
-        with con.cursor() as cur:
-
-            cur.execute("SELECT 1")
-
-            result = cur.fetchone()
-
-        con.close()
+        cursor.close()
+        connection.close()
 
         return {
             "status": "healthy",
-            "database": "connected",
-            "result": result
+            "application": "GoBus",
+            "database": "connected"
         }, 200
 
-    except Exception:
-
-        app.logger.exception("Database health check failed")
+    except Error as e:
+        app.logger.error("Health check failed: %s", e)
 
         return {
             "status": "unhealthy",
             "database": "disconnected"
-        }, 503
+        }, 500
 
-
-# ==================================
-# APPLICATION START
-# ==================================
 
 if __name__ == "__main__":
-
-    create_table()
-
-    app.run(
-
-        host="0.0.0.0",
-
-        port=5000,
-
-        debug=False
-
-    )
+    app.run(host="0.0.0.0", port=5000, debug=False)

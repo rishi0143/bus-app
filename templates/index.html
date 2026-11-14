@@ -1,6 +1,6 @@
+
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,201 +9,220 @@
 
     <link rel="stylesheet"
           href="{{ url_for('static', filename='style.css') }}">
-
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-          rel="stylesheet">
 </head>
 
 <body>
 
-<header class="navbar">
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="logo">GoBus</div>
 
-    <div class="logo">
-        <span>G</span> GoBus
-    </div>
-
-    <nav>
-        <a href="/">Home</a>
-        <a href="#destinations">Destinations</a>
-        <a href="/my-bookings">My Bookings</a>
+        <div class="nav-links">
+            <a href="/">Home</a>
+            <a href="#booking">Book Ticket</a>
+            <a href="/bookings">My Bookings</a>
+        </div>
     </nav>
 
-</header>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Travel Easy with GoBus</h1>
 
+            <p>
+                Book your bus tickets online.
+                Safe, simple and comfortable journeys.
+            </p>
 
-<section class="hero">
+            <a href="#booking" class="hero-btn">
+                Book Your Ticket
+            </a>
+        </div>
+    </section>
 
-    <div class="hero-content">
+    <!-- Booking Section -->
+    <section class="booking-section" id="booking">
 
-        <h1>
-            India's Journey<br>
-            <span>Starts With GoBus</span>
-        </h1>
+        <div class="booking-card">
 
-        <p>
-            Book your bus tickets easily.
-            Travel to beautiful destinations every day.
-        </p>
+            <h2>Book Your Bus Ticket</h2>
 
-        <a href="#destinations" class="hero-btn">
-            Explore Destinations
+            <p class="subtitle">
+                Enter passenger and travel details
+            </p>
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert {{ category }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% if db_error %}
+                <div class="alert error">
+                    {{ db_error }}
+                </div>
+            {% endif %}
+
+            <!-- Booking Form -->
+            <form action="/book" method="POST">
+
+                <div class="form-group">
+                    <label>Passenger Name</label>
+                    <input
+                        type="text"
+                        name="name"
+                        placeholder="Enter your name"
+                        maxlength="100"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input
+                        type="email"
+                        name="email"
+                        placeholder="Enter your email"
+                        maxlength="150"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label>Mobile Number</label>
+                    <input
+                        type="tel"
+                        name="phone"
+                        placeholder="Enter mobile number"
+                        maxlength="20"
+                        required
+                    >
+                </div>
+
+                <div class="form-row">
+
+                    <div class="form-group">
+                        <label>From</label>
+                        <input
+                            type="text"
+                            name="source"
+                            placeholder="Source city"
+                            maxlength="100"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label>To</label>
+                        <input
+                            type="text"
+                            name="destination"
+                            placeholder="Destination city"
+                            maxlength="100"
+                            required
+                        >
+                    </div>
+
+                </div>
+
+                <div class="form-row">
+
+                    <div class="form-group">
+                        <label>Travel Date</label>
+                        <input
+                            type="date"
+                            name="travel_date"
+                            min="{{ today }}"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label>Number of Seats</label>
+                        <input
+                            type="number"
+                            name="seats"
+                            min="1"
+                            max="6"
+                            value="1"
+                            required
+                        >
+                    </div>
+
+                </div>
+
+                <button type="submit" class="book-btn">
+                    Confirm Booking
+                </button>
+
+            </form>
+
+        </div>
+
+    </section>
+
+    <!-- Recent Bookings -->
+    <section class="recent-section">
+
+        <h2>Recent Bookings</h2>
+
+        {% if bookings %}
+
+            <div class="table-container">
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Booking ID</th>
+                            <th>Passenger</th>
+                            <th>Route</th>
+                            <th>Travel Date</th>
+                            <th>Seats</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for booking in bookings %}
+                        <tr>
+                            <td>#{{ booking.id }}</td>
+                            <td>{{ booking.name }}</td>
+                            <td>
+                                {{ booking.source }}
+                                →
+                                {{ booking.destination }}
+                            </td>
+                            <td>{{ booking.travel_date }}</td>
+                            <td>{{ booking.seats }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+            </div>
+
+        {% else %}
+
+            <p class="empty-message">
+                No bookings available yet.
+            </p>
+
+        {% endif %}
+
+        <a href="/bookings" class="history-link">
+            View All Bookings
         </a>
 
-    </div>
+    </section>
 
-</section>
-
-
-{% with messages = get_flashed_messages() %}
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert">{{ message }}</div>
-        {% endfor %}
-    {% endif %}
-{% endwith %}
-
-
-<section class="search-box">
-
-    <h2>Search Your Journey</h2>
-
-    <form action="/" method="get">
-
-        <div class="search-fields">
-
-            <div>
-                <label>From</label>
-                <input type="text" value="Warangal" readonly>
-            </div>
-
-            <div>
-                <label>Travel Date</label>
-                <input type="date"
-                       name="travel_date"
-                       min="{{ today }}"
-                       required>
-            </div>
-
-            <button type="submit">
-                Search Buses
-            </button>
-
-        </div>
-
-    </form>
-
-</section>
-
-
-<section class="destinations" id="destinations">
-
-    <h2>Popular Destinations</h2>
-
-    <p class="subtitle">
-        Explore five beautiful destinations from Warangal
-    </p>
-
-    <div class="destination-grid">
-
-        {% for name, place in destinations.items() %}
-
-        <div class="card">
-
-            <div class="card-content">
-
-                <span class="daily">DAILY BUSES</span>
-
-                <h3>{{ name }}</h3>
-
-                <p>{{ place.description }}</p>
-
-                <p>Travel Time: {{ place.duration }}</p>
-
-                <h2>₹{{ place.fare }}</h2>
-
-                <form action="/book" method="POST">
-
-                    <input type="hidden"
-                           name="destination"
-                           value="{{ name }}">
-
-                    <label>Passenger Name</label>
-
-                    <input type="text"
-                           name="name"
-                           placeholder="Enter your name"
-                           required>
-
-                    <label>Mobile Number</label>
-
-                    <input type="tel"
-                           name="phone"
-                           pattern="[0-9]{10}"
-                           maxlength="10"
-                           placeholder="10-digit mobile number"
-                           required>
-
-                    <label>Travel Date</label>
-
-                    <input type="date"
-                           name="travel_date"
-                           min="{{ today }}"
-                           required>
-
-                    <label>Departure Time</label>
-
-                    <select name="departure" required>
-
-                        {% for time in departures %}
-
-                        <option value="{{ time }}">
-                            {{ time }}
-                        </option>
-
-                        {% endfor %}
-
-                    </select>
-
-                    <label>Number of Seats</label>
-
-                    <select name="seats">
-
-                        {% for n in range(1,7) %}
-
-                        <option value="{{ n }}">
-                            {{ n }}
-                        </option>
-
-                        {% endfor %}
-
-                    </select>
-
-                    <button type="submit">
-                        Book Now →
-                    </button>
-
-                </form>
-
-            </div>
-
-        </div>
-
-        {% endfor %}
-
-    </div>
-
-</section>
-
-
-<footer>
-
-    <h2>GoBus</h2>
-
-    <p>Travel Smart. Travel Safe.</p>
-
-    <p>© 2026 GoBus Bus Ticket Booking</p>
-
-</footer>
+    <!-- Footer -->
+    <footer>
+        <p>© 2026 GoBus. All Rights Reserved.</p>
+    </footer>
 
 </body>
 </html>
